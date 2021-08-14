@@ -23,15 +23,16 @@ WHERE location IN ('TN', 'KY');
 SELECT COUNT(*)
 FROM data_analyst_jobs
 WHERE location = 'TN'
-AND star_rating >= 4;
+AND star_rating > 4;
 
 --DONE 5.How many postings in the dataset have a review count between 500 and 1000?
-SELECT *
+SELECT count(*)
 FROM data_analyst_jobs
 WHERE review_count between 500 AND 1000;
 
 --DONE 6.Show the average star rating for companies in each state. The output should show the state as state and the average rating for the state as avg_rating. Which state shows the highest average rating?
-SELECT location AS state,
+SELECT
+location AS state,
 company,
 round(AVG(star_rating),2) AS avg_rating
 FROM data_analyst_jobs
@@ -41,54 +42,53 @@ ORDER BY avg_rating desc,
 location asc;
 
 --DONE 7.Select unique job titles from the data_analyst_jobs table. How many are there?
-WITH dist_title AS
-(SELECT distinct title,
- company,
- location
-FROM data_analyst_jobs
-WHERE star_rating IS NOT NULL
-GROUP BY company, location, title
-ORDER BY title asc)
-
-SELECT count(*)
-FROM dist_title;
+SELECT
+count(distinct title)
+FROM data_analyst_jobs;
 
 --DONE 8.How many unique job titles are there for California companies?
-WITH dist_title AS
-(
-SELECT distinct title
+SELECT
+count(distinct title)
 FROM data_analyst_jobs
-WHERE star_rating IS NOT NULL
-AND location = 'CA'
-GROUP BY company, location, title
-ORDER BY title asc
-)
-
-SELECT count(*)
-FROM dist_title;
+WHERE location = 'CA';
 
 --DONE 9.Find the name of each company and its average star rating for all companies that have more than 5000 reviews across all locations. How many companies are there with more that 5000 reviews across all locations?
-select company,
-round(avg(star_rating),2) as avg_rating,
-review_count
+WITH top_companies AS
+(select distinct company,
+round(avg(star_rating),2) as avg_rating
 from data_analyst_jobs
 where star_rating is not null AND
 company is not null AND
-review_count >= 5000
+review_count > 5000
 group by company, review_count
-order by review_count desc;
+order by avg_rating desc,
+company asc)
+
+Select count(*)
+from top_companies;
 
 --DONE 10.Add the code to order the query in #9 from highest to lowest average star rating. Which company with more than 5000 reviews across all locations in the dataset has the highest star rating? What is that rating?
-select company,
-round(avg(star_rating),2) as avg_rating,
-review_count
+select distinct company,
+	round(avg(star_rating),2) as avg_rating
 from data_analyst_jobs
-where star_rating is not null AND
-company is not null AND
-review_count >= 5000
-group by company, review_count
-order by avg_rating desc, review_count desc;
---'Kaiser Permanente' with 4.20 rounded avg star rating
+where (star_rating is not null
+	AND company is not null
+	AND review_count > 5000)
+group by company
+order by avg_rating desc;
+
+
+
+SELECT DISTINCT (company), 
+	AVG(star_rating) AS avg_star, 
+	SUM(review_count)AS sum_review
+FROM data_analyst_jobs
+WHERE company IS NOT NULL
+	AND star_rating IS NOT NULL
+GROUP BY company
+HAVING SUM(review_count)>5000
+ORDER BY avg_star DESC;
+
 
 --DONE 11.Find all the job titles that contain the word ‘Analyst’. How many different job titles are there?
 SELECT title,
@@ -97,6 +97,11 @@ FROM data_analyst_jobs
 WHERE title ILIKE ('%nalyst%')
 GROUP BY title
 order by count desc;
+
+SELECT title
+FROM data_analyst_jobs
+WHERE LOWER(title) LIKE ('%analyst%');
+--upper can be used also
 
 --DONE 12.How many different job titles do not contain either the word ‘Analyst’ or the word ‘Analytics’? What word do these positions have in common?
 SELECT title
@@ -120,3 +125,15 @@ AND domain IS NOT Null
 GROUP BY domain
 ORDER BY COUNT(title) DESC 
 LIMIT 4;
+
+
+--window function example
+SELECT title, 
+	domain, 
+	days_since_posting,
+	COUNT(*) OVER(PARTITION BY domain) AS hard_to_fill
+FROM data_analyst_jobs
+WHERE skills LIKE '%SQL%'
+AND days_since_posting > 21
+AND domain IS NOT NULL 
+ORDER BY hard_to_fill DESC;
